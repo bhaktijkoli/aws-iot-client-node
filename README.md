@@ -1,2 +1,1 @@
-# aws-iot-client-node
- AWS IoT Client - NodeJS
+# AWS IoT Client - NodeJS
