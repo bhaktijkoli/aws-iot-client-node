@@ -12,6 +12,7 @@
     "typescript": "^4.7.2"
   },
   "dependencies": {
+    "@aws-sdk/client-greengrassv2": "^3.100.0",
     "@aws-sdk/client-iot": "^3.99.0",
     "dotenv": "^16.0.1"
   }

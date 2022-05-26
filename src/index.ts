@@ -1,6 +1,6 @@
 import { config } from 'dotenv'
-import crypto from "crypto"
 import { AttachThingPrincipalCommand, CreateKeysAndCertificateCommand, CreateThingCommand, IoTClient } from "@aws-sdk/client-iot";
+import { BatchAssociateClientDeviceWithCoreDeviceCommand, GreengrassV2Client } from "@aws-sdk/client-greengrassv2";
 import path from 'path';
 import fs from 'fs';
 
@@ -12,6 +12,7 @@ const AWS_ACCESS_KEY_ID = String(process.env.AWS_ACCESS_KEY_ID)
 const AWS_SECRET_ACCESS_KEY = String(process.env.AWS_SECRET_ACCESS_KEY)
 const DEVICE_NAME = process.env.DEVICE_NAME
 const DEVICE_TYPE = process.env.DEVICE_TYPE
+const CORE_DEVICE_NAME = process.env.CORE_DEVICE_NAME
 
 // Create Clients
 const awsIoTClient = new IoTClient({
@@ -21,6 +22,13 @@ const awsIoTClient = new IoTClient({
         secretAccessKey: AWS_SECRET_ACCESS_KEY,
     },
 });
+const awsGreengrassClient = new GreengrassV2Client({
+    region: AWS_REGION,
+    credentials: {
+        accessKeyId: AWS_ACCESS_KEY_ID,
+        secretAccessKey: AWS_SECRET_ACCESS_KEY,
+    },
+})
 
 // Register Device
 const registerDevice = async () => {
@@ -31,7 +39,6 @@ const registerDevice = async () => {
     });
     const response = await awsIoTClient.send(command);
     console.log({ response })
-    console.log("Device Register");
 }
 
 // Create and Attach Certificate
@@ -71,9 +78,22 @@ const createCertificate = async () => {
     console.log({ attachResponse });
 }
 
+// Associate Device with Code Device
+const associateDevice = async () => {
+    const command = new BatchAssociateClientDeviceWithCoreDeviceCommand({
+        coreDeviceThingName: CORE_DEVICE_NAME,
+        entries: [
+            { thingName: DEVICE_NAME }
+        ]
+    });
+    const response = await awsGreengrassClient.send(command)
+    console.log({ response })
+}
+
 const start = async () => {
     await registerDevice()
     await createCertificate()
+    await associateDevice()
     process.exit(0)
 }
 
