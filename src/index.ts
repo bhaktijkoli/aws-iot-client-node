@@ -1,6 +1,6 @@
 import { config } from 'dotenv'
 import { AttachThingPrincipalCommand, CreateKeysAndCertificateCommand, CreateThingCommand, IoTClient } from "@aws-sdk/client-iot";
-import { BatchAssociateClientDeviceWithCoreDeviceCommand, GreengrassV2Client } from "@aws-sdk/client-greengrassv2";
+import { BatchAssociateClientDeviceWithCoreDeviceCommand, GetConnectivityInfoCommand, GreengrassV2Client } from "@aws-sdk/client-greengrassv2";
 import path from 'path';
 import fs from 'fs';
 
@@ -90,10 +90,26 @@ const associateDevice = async () => {
     console.log({ response })
 }
 
+// Get Endpoint
+const getEndpoint = async () => {
+    const command = new GetConnectivityInfoCommand({
+        thingName: CORE_DEVICE_NAME
+    });
+    const response = await awsGreengrassClient.send(command);
+    const { connectivityInfo } = response
+    if (!connectivityInfo) {
+        return
+    }
+    const { hostAddress, portNumber } = connectivityInfo[0]
+    const url = `mqtt://${hostAddress}:${portNumber}`
+    console.log({ url });
+}
+
 const start = async () => {
     await registerDevice()
     await createCertificate()
     await associateDevice()
+    await getEndpoint()
     process.exit(0)
 }
 
