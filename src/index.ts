@@ -117,12 +117,15 @@ const discoverAndConnect = async () => {
         console.log("Certificates not found");
         return
     }
+    const rootCertificate = fs.readFileSync(rootCertificateFilePath, 'utf-8')
+    const certificate = fs.readFileSync(certificatePemFilePath, 'utf-8')
+    const privateKey = fs.readFileSync(privateFilePath, 'utf-8')
 
     // Create Socket, TLS Config
     const client_bootstrap = new io.ClientBootstrap();
     const socket_options = new io.SocketOptions(io.SocketType.STREAM, io.SocketDomain.IPV4, 3000);
-    const tls_options = new io.TlsContextOptions();
-    tls_options.override_default_trust_store_from_path(undefined, rootCertificateFilePath);
+    const tls_options = io.TlsContextOptions.create_client_with_mtls(certificate, privateKey)
+    tls_options.override_default_trust_store(rootCertificate);
     tls_options.certificate_filepath = certificatePemFilePath;
     tls_options.private_key_filepath = privateFilePath;
     if (io.is_alpn_available()) {
@@ -141,7 +144,7 @@ const discoverAndConnect = async () => {
             for (const core of gg_group.cores) {
                 for (const endpoint of core.connectivity) {
                     // Create MQTT Config
-                    const mqtt_config = iot.AwsIotMqttConnectionConfigBuilder.new_mtls_builder_from_path(certificatePemFilePath, privateFilePath)
+                    const mqtt_config = iot.AwsIotMqttConnectionConfigBuilder.new_mtls_builder(certificate, privateKey)
                         .with_certificate_authority(gg_group.certificate_authorities[0])
                         .with_client_id(DEVICE_NAME as string)
                         .with_clean_session(true)
