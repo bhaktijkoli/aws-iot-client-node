@@ -1,0 +1,14 @@
+{
+    "mqttTopicMapping": {
+        "TestTopicMapping": {
+            "topic": "test/topic",
+            "source": "LocalMqtt",
+            "target": "IotCore"
+        },
+        "TestTopicResponseMapping": {
+            "topic": "test/topic/response",
+            "source": "LocalMqtt",
+            "target": "IotCore"
+        }
+    }
+}

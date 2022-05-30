@@ -1,0 +1,5 @@
+{
+    "defaultPort": 8883,
+    "includeIPv4LoopbackAddrs": false,
+    "includeIPv4LinkLocalAddrs": true
+}

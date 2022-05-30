@@ -1,0 +1,42 @@
+{
+  "deviceGroups": {
+    "formatVersion": "2021-03-05",
+    "definitions": {
+      "MyDeviceGroup": {
+        "selectionRule": "thingName: mobile-*",
+        "policyName": "MyRestrictivePolicy"
+      }
+    },
+    "policies": {
+      "MyRestrictivePolicy": {
+        "AllowConnect": {
+          "statementDescription": "Allow client devices to connect.",
+          "operations": [
+            "mqtt:connect"
+          ],
+          "resources": [
+            "*"
+          ]
+        },
+        "AllowPublish": {
+          "statementDescription": "Allow client devices to publish on test/topic.",
+          "operations": [
+            "mqtt:publish"
+          ],
+          "resources": [
+            "mqtt:topic:test/topic"
+          ]
+        },
+        "AllowSubscribe": {
+          "statementDescription": "Allow client devices to subscribe to test/topic/response.",
+          "operations": [
+            "mqtt:subscribe"
+          ],
+          "resources": [
+            "mqtt:topicfilter:test/topic/response"
+          ]
+        }
+      }
+    }
+  }
+}
