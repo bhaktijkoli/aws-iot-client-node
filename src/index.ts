@@ -170,6 +170,16 @@ const discoverAndConnect = async () => {
         }
         // Successfull MQTT Connections
         for (const connection of connections) {
+            const payload = {
+                message: "Hello"
+            }
+            let result = await connection.publish("test/topic", payload, mqtt.QoS.AtMostOnce);
+            console.log("publish results", result);
+            result = await connection.subscribe('test/topic/response', mqtt.QoS.AtLeastOnce, (topic, payload) => {
+                console.log("Recieved", { topic, payload });
+            })
+            console.log("subscribe results", result);
+
         }
     } catch (error) {
         console.log(error);
@@ -184,7 +194,7 @@ const start = async () => {
     await associateDevice()
     await getEndpoint()
     await discoverAndConnect()
-    process.exit(0)
+    process.stdin.resume();
 }
 
 start()
