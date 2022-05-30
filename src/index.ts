@@ -1,6 +1,7 @@
 import { config } from 'dotenv'
 import { AttachThingPrincipalCommand, CreateKeysAndCertificateCommand, CreateThingCommand, IoTClient } from "@aws-sdk/client-iot";
 import { BatchAssociateClientDeviceWithCoreDeviceCommand, GetConnectivityInfoCommand, GreengrassV2Client } from "@aws-sdk/client-greengrassv2";
+import { mqtt, io, iot, greengrass } from 'aws-iot-device-sdk-v2';
 import path from 'path';
 import fs from 'fs';
 
@@ -105,11 +106,81 @@ const getEndpoint = async () => {
     console.log({ url });
 }
 
+// Discover and Conenct
+const discoverAndConnect = async () => {
+    // Certificates
+    const certsDir = path.join(__dirname, '..', 'certs')
+    const rootCertificateFilePath = path.join(__dirname, '..', 'AmazonRootCA1.pem')
+    const certificatePemFilePath = path.join(certsDir, 'cert.pem.crt')
+    const privateFilePath = path.join(certsDir, 'private.pem.key')
+    if (!fs.existsSync(rootCertificateFilePath) || !fs.existsSync(certificatePemFilePath) || !fs.existsSync(privateFilePath)) {
+        console.log("Certificates not found");
+        return
+    }
+
+    // Create Socket, TLS Config
+    const client_bootstrap = new io.ClientBootstrap();
+    const socket_options = new io.SocketOptions(io.SocketType.STREAM, io.SocketDomain.IPV4, 3000);
+    const tls_options = new io.TlsContextOptions();
+    tls_options.override_default_trust_store_from_path(undefined, rootCertificateFilePath);
+    tls_options.certificate_filepath = certificatePemFilePath;
+    tls_options.private_key_filepath = privateFilePath;
+    if (io.is_alpn_available()) {
+        tls_options.alpn_list.push('x-amzn-http-ca');
+    }
+    const tls_ctx = new io.ClientTlsContext(tls_options);
+
+    // Discover Core Devices
+    const discovery = new greengrass.DiscoveryClient(client_bootstrap, socket_options, tls_ctx, AWS_REGION as string);
+    try {
+        const discovery_response: greengrass.model.DiscoverResponse = await discovery.discover(DEVICE_NAME as string)
+        const mqtt_client = new mqtt.MqttClient(client_bootstrap);
+        let attempted_cores: string[] = [];
+        let connections: mqtt.MqttClientConnection[] = [];
+        for (const gg_group of discovery_response.gg_groups) {
+            for (const core of gg_group.cores) {
+                for (const endpoint of core.connectivity) {
+                    // Create MQTT Config
+                    const mqtt_config = iot.AwsIotMqttConnectionConfigBuilder.new_mtls_builder_from_path(certificatePemFilePath, privateFilePath)
+                        .with_certificate_authority(gg_group.certificate_authorities[0])
+                        .with_client_id(DEVICE_NAME as string)
+                        .with_clean_session(true)
+                        .with_socket_options(new io.SocketOptions(io.SocketType.STREAM, io.SocketDomain.IPV4, 3000))
+                        .build();
+                    mqtt_config.host_name = endpoint.host_address;
+                    mqtt_config.port = endpoint.port;
+                    console.log(`Trying endpoint=${JSON.stringify(endpoint)}`);
+                    const mqtt_connection = mqtt_client.new_connection(mqtt_config);
+                    mqtt_client
+                    mqtt_connection.on('error', (error) => {
+                        console.warn(`Connection to endpoint=${JSON.stringify(endpoint)} failed: ${error}`);
+                    });
+                    mqtt_connection.on('connect', () => {
+                        attempted_cores.push(core.thing_arn.toString());
+                        connections.push(mqtt_connection)
+                        console.log(`Connected to endpoint=${JSON.stringify(endpoint)}`);
+                    })
+                    // Connect to MQTT
+                    await mqtt_connection.connect()
+                }
+            }
+        }
+        // Successfull MQTT Connections
+        for (const connection of connections) {
+        }
+    } catch (error) {
+        console.log(error);
+
+    }
+}
+
+
 const start = async () => {
     await registerDevice()
     await createCertificate()
     await associateDevice()
     await getEndpoint()
+    await discoverAndConnect()
     process.exit(0)
 }
 

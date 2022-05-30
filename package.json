@@ -14,6 +14,8 @@
   "dependencies": {
     "@aws-sdk/client-greengrassv2": "^3.100.0",
     "@aws-sdk/client-iot": "^3.99.0",
+    "aws-crt": "^1.12.3",
+    "aws-iot-device-sdk-v2": "^1.8.2",
     "dotenv": "^16.0.1"
   }
 }
